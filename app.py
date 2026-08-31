@@ -150,7 +150,7 @@ def get_stats():
 
 @app.route('/api/rebuild', methods=['POST'])
 def rebuild_database():
-    import subprocess
+    import subprocess  # nosec B404
     try:
         result = subprocess.run(  # nosec B603
             [sys.executable, str(BASE_DIR / 'rebuild_database.py')],
