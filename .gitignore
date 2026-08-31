@@ -1,0 +1,7 @@
+__pycache__
+*.pyc
+.audit_venv/
+.venv/
+venv/
+dog_breeds.db
+*.db
