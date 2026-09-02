@@ -13,7 +13,8 @@ EXPOSE 5000
 
 ENV DATABASE_URL=/data/dog_breeds.db
 ENV STATIC_DIR=/data/static
+ENV FLASK_ENV=production
 
 VOLUME ["/data"]
 
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "app:app"]

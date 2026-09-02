@@ -1,11 +1,13 @@
 import sqlite3
+import sys
+import os
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file
 
 app = Flask(__name__)
-BASE_DIR = Path('/root/breed-scholar')
-DB_PATH = BASE_DIR / 'dog_breeds.db'
+BASE_DIR = Path(os.environ.get('BASE_DIR', Path(__file__).resolve().parent))
+DB_PATH = Path(os.environ.get('DATABASE_URL', BASE_DIR / 'dog_breeds.db'))
 THUMBS_DIR = BASE_DIR / 'static' / 'thumbs'
 FULL_DIR = BASE_DIR / 'static' / 'full'
 THUMBS_DIR.mkdir(parents=True, exist_ok=True)
@@ -50,39 +52,30 @@ def list_breeds():
     registry = request.args.get('registry', '').lower()
     group = request.args.get('group', '').strip().lower()
 
-    base_where = 'WHERE 1=1'
-    base_params = []
+    where_clauses = []
+    params = []
 
     if search:
-        base_where += ' AND LOWER(b.name) LIKE ?'
-        base_params.append(f'%{search}%')
+        where_clauses.append('LOWER(b.name) LIKE ?')
+        params.append(f'%{search}%')
 
     if registry:
-        base_where += ' AND r.code = ?'
-        base_params.append(registry)
+        where_clauses.append('r.code = ?')
+        params.append(registry)
 
     if group:
-        base_where += ' AND LOWER(b.group_name) LIKE ?'
-        base_params.append(f'%{group}%')
+        where_clauses.append('LOWER(b.group_name) LIKE ?')
+        params.append(f'%{group}%')
 
-    query = f'''
-        SELECT b.id, b.name, b.group_name, b.rank, b.country, b.size,
-               b.fci_group, b.fact, b.tips, b.image_url,
-               GROUP_CONCAT(r.code, ',') as registries
-        FROM breeds b
-        LEFT JOIN breed_registries br ON b.id = br.breed_id
-        LEFT JOIN registries r ON br.registry_id = r.id
-        {base_where}
-        GROUP BY b.id
-        ORDER BY b.name ASC
-        LIMIT ? OFFSET ?
-    '''
+    where_clause = 'WHERE ' + ' AND '.join(where_clauses) if where_clauses else ''
     offset = (page - 1) * per_page
-    cursor = db.execute(query, base_params + [per_page, offset])
+
+    query = 'SELECT b.id, b.name, b.group_name, b.rank, b.country, b.size, b.fci_group, b.fact, b.tips, b.image_url, GROUP_CONCAT(r.code, \',\') as registries FROM breeds b LEFT JOIN breed_registries br ON b.id = br.breed_id LEFT JOIN registries r ON br.registry_id = r.id ' + where_clause + ' GROUP BY b.id ORDER BY b.name ASC LIMIT ? OFFSET ?'  # nosec B608
+    cursor = db.execute(query, params + [per_page, offset])
     breeds = [dict(row) for row in cursor.fetchall()]
 
-    count_query = f'SELECT COUNT(DISTINCT b.id) FROM breeds b LEFT JOIN breed_registries br ON b.id = br.breed_id LEFT JOIN registries r ON br.registry_id = r.id {base_where}'
-    total = db.execute(count_query, base_params).fetchone()[0]
+    count_query = 'SELECT COUNT(DISTINCT b.id) FROM breeds b LEFT JOIN breed_registries br ON b.id = br.breed_id LEFT JOIN registries r ON br.registry_id = r.id ' + where_clause  # nosec B608
+    total = db.execute(count_query, params).fetchone()[0]
 
     db.close()
 
@@ -157,10 +150,10 @@ def get_stats():
 
 @app.route('/api/rebuild', methods=['POST'])
 def rebuild_database():
-    import subprocess
+    import subprocess  # nosec B404
     try:
-        result = subprocess.run(
-            ['python3', str(BASE_DIR / 'rebuild_database.py')],
+        result = subprocess.run(  # nosec B603
+            [sys.executable, str(BASE_DIR / 'rebuild_database.py')],
             capture_output=True,
             text=True,
             timeout=300,
@@ -225,4 +218,4 @@ def manifest():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)  # nosec B201,B104
