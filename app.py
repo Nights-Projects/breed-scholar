@@ -178,13 +178,21 @@ def rebuild_database():
         })
     except subprocess.TimeoutExpired:
         return jsonify({'success': False, 'error': 'Rebuild timed out'}), 500
-    except (OSError, ValueError, RuntimeError) as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception('Database rebuild failed')
+        return jsonify({'success': False, 'error': 'Rebuild failed'}), 500
 
 
 @app.route('/static/thumbs/<filename>')
 def serve_thumb(filename):
-    thumb_path = THUMBS_DIR / filename
+    # Sanitize filename to prevent path traversal
+    safe_name = Path(filename).name
+    thumb_path = THUMBS_DIR / safe_name
+    try:
+        thumb_path.resolve().relative_to(THUMBS_DIR.resolve())
+    except ValueError:
+        return jsonify({'error': 'Invalid path'}), 400
     if thumb_path.exists():
         return send_file(str(thumb_path), mimetype='image/jpeg')
     placeholder = BASE_DIR / 'static' / 'placeholder.jpg'
@@ -195,7 +203,13 @@ def serve_thumb(filename):
 
 @app.route('/static/full/<filename>')
 def serve_full(filename):
-    full_path = FULL_DIR / filename
+    # Sanitize filename to prevent path traversal
+    safe_name = Path(filename).name
+    full_path = FULL_DIR / safe_name
+    try:
+        full_path.resolve().relative_to(FULL_DIR.resolve())
+    except ValueError:
+        return jsonify({'error': 'Invalid path'}), 400
     if full_path.exists():
         return send_file(str(full_path))
     return jsonify({'error': 'Image not cached'}), 404

@@ -88,8 +88,10 @@ def get_wikimedia_image_url(breed_name):
             for page_data in pages.values():
                 if 'imageinfo' in page_data:
                     return page_data['imageinfo'][0]['url']
-    except requests.RequestException:
-        pass
+    except requests.RequestException as e:
+        print(f'  [!] Wikimedia search fallback error: {e}')
+    except (ValueError, KeyError) as e:
+        print(f'  [!] Wikimedia response parse error: {e}')
     
     return None
 
