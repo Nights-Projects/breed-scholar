@@ -1,6 +1,6 @@
+import os
 import sqlite3
 import sys
-import os
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file
