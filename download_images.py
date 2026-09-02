@@ -3,6 +3,7 @@
 and generate 200x200 thumbnails."""
 
 import argparse
+import os
 import sqlite3
 import time
 from pathlib import Path
@@ -20,7 +21,7 @@ except ImportError:
         LANCZOS = 3
 from io import BytesIO
 
-BASE_DIR = Path('/root/breed-scholar')
+BASE_DIR = Path(os.environ.get('BASE_DIR', Path(__file__).resolve().parent))
 DB_PATH = BASE_DIR / 'dog_breeds.db'
 THUMBS_DIR = BASE_DIR / 'static' / 'thumbs'
 FULL_DIR = BASE_DIR / 'static' / 'full'
