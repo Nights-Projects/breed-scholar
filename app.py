@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_file
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 BASE_DIR = Path(os.environ.get('BASE_DIR', Path(__file__).resolve().parent))
@@ -186,13 +187,10 @@ def rebuild_database():
 
 @app.route('/static/thumbs/<filename>')
 def serve_thumb(filename):
-    # Sanitize filename to prevent path traversal
-    safe_name = Path(filename).name
+    safe_name = secure_filename(filename)
+    if not safe_name:
+        return jsonify({'error': 'Invalid filename'}), 400
     thumb_path = THUMBS_DIR / safe_name
-    try:
-        thumb_path.resolve().relative_to(THUMBS_DIR.resolve())
-    except ValueError:
-        return jsonify({'error': 'Invalid path'}), 400
     if thumb_path.exists():
         return send_file(str(thumb_path), mimetype='image/jpeg')
     placeholder = BASE_DIR / 'static' / 'placeholder.jpg'
@@ -203,13 +201,10 @@ def serve_thumb(filename):
 
 @app.route('/static/full/<filename>')
 def serve_full(filename):
-    # Sanitize filename to prevent path traversal
-    safe_name = Path(filename).name
+    safe_name = secure_filename(filename)
+    if not safe_name:
+        return jsonify({'error': 'Invalid filename'}), 400
     full_path = FULL_DIR / safe_name
-    try:
-        full_path.resolve().relative_to(FULL_DIR.resolve())
-    except ValueError:
-        return jsonify({'error': 'Invalid path'}), 400
     if full_path.exists():
         return send_file(str(full_path))
     return jsonify({'error': 'Image not cached'}), 404

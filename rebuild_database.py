@@ -35,6 +35,7 @@ def fetch_page(url, retries=3):
             else:
                 print(f"  [!] Failed to fetch {url}: {e}")
                 return None
+    return None
 
 
 def extract_akc_breed_links(html, base_url):
